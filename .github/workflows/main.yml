@@ -1,0 +1,45 @@
+name: CI/CD
+
+on: 
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+        
+jobs: 
+    ci:
+        name: Lint, Test e Build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/ setup-node@v4
+              with:
+                node-version: 20
+                cache: npm
+            - run: npm ci
+            - run: npm run lint 
+            - run: npm run test     
+            - run: npm run build
+
+deploy:
+    name: Deploy para produção (Vercel) 
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+        VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps: 
+        - uses: actions/checkout@v4
+        - uses: actions/setip-node@v4
+          with:
+            nove-version: 20
+            cache: npm
+        - name: Instalar Vercel CLI
+          run: npm install --global vercel@latest
+        - name: Pull do ambiente de produação
+          run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        - name: Build (Vercel)
+          run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}  
+        - name: Deploy
+          run: vercel deploy --prebuild --prod --token=${{ secrets.VERCEL_TOKEN }}      
